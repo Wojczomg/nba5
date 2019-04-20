@@ -1,0 +1,38 @@
+import scrapy
+import json
+from scrapy.http.headers import Headers
+import csv
+RENDER_HTML_URL = "http://192.168.99.100:8050/render.html"
+
+class MySpider(scrapy.Spider):
+    kody=open("kody.txt", "r")
+    x = kody.read()
+    x = x.split("\n")
+    start_urls = ["https://www.flashscore.pl/mecz/{}/#statystyki-meczu;0".format(i) for i in x[::-1]]
+    name="ta4"
+
+    def start_requests(self):
+        for url in self.start_urls:
+            body = json.dumps({"url": url, "wait": 0.5}, sort_keys=True)
+            headers = Headers({'Content-Type': 'application/json'})
+            yield scrapy.Request(RENDER_HTML_URL, self.parse, method="POST",
+                                 body=body, headers=headers)
+
+    def parse(self, response):
+        row=[]
+        row.append(hash(response.css("div#utime::text").get()+
+               response.css("div.tname__text").css("a::text")[0].get()+
+               response.css("div.tname__text").css("a::text")[1].get()))
+        row.append(response.css("div.tname__text").css("a::text")[0].get())
+        row.append(response.css("div.tname__text").css("a::text")[1].get())
+        row.append(response.css("div#utime::text").get())
+        row.extend(response.css("div.statText--homeValue::text").getall())
+        row.extend(response.css("div.statText--awayValue::text").getall())
+        with open('stats1.csv', 'a') as csvFile:
+            writer = csv.writer(csvFile)
+            writer.writerow(row)
+
+        csvFile.close()
+        yield {"statshome":response.css("div.statText--homeValue::text").getall(),
+               "statstitle":response.css("div.statText--titleValue::text").getall(),
+               "statsaway":response.css("div.statText--awayValue::text").getall(),}
