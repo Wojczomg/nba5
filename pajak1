@@ -1,0 +1,23 @@
+import scrapy
+import json
+from scrapy.http.headers import Headers
+
+RENDER_HTML_URL = "http://192.168.99.100:8050/render.html"
+
+class MySpider(scrapy.Spider):
+    start_urls = ["https://www.flashscore.pl/koszykowka/usa/nba/wyniki/"]
+    name="ta1"
+
+    def start_requests(self):
+        for url in self.start_urls:
+            body = json.dumps({"url": url, "wait": 0.5}, sort_keys=True)
+            headers = Headers({'Content-Type': 'application/json'})
+            yield scrapy.Request(RENDER_HTML_URL, self.parse, method="POST",
+                                 body=body, headers=headers)
+
+    def parse(self, response):
+        filename = "kody.txt"
+        with open(filename,'w') as f:
+           for i in  response.css("tr::attr(id)").re(r'^g_3_[\w]{8}'):
+                f.write(i[4:]+"\n")
+        yield {"AAAAAAAAAAA":response.css("tr::attr(id)").re(r'^g_3_[\w]{8}')}
