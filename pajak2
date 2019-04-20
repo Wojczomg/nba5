@@ -1,0 +1,46 @@
+import scrapy
+import re
+
+x = {'Host': 'd.flashscore.pl',
+    'User-Agent': 'core',
+    'Accept': '* / *',
+    'Accept-Language': '*',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Referer': 'https://d.flashscore.pl/x/feed/proxy-local',
+    'X Referer': 'https://www.flashscore.pl/koszykowka/usa/nba/wyniki/',
+    'X-Fsign': 'SW9D1eZo',
+    'X-Requested-With':'XMLHttpRequest',
+    'Connection':'keep-alive',
+    'Cookie':'_ga=GA1.2.311004931.1474208723; cto_lwid=fd4fea48-8382-4c8f-9882-c3be9fb779af; cto_idcpy=20baafa8-f81a-47ef-b19a-c3cd9ca08897;_gid=GA1.2.1084902017.1554631733;_sessionhits_UA-191939-4=2'}
+
+class MySpider(scrapy.Spider):
+    start_urls = ["https://d.flashscore.pl/x/feed/tr_3_200_IBmris38_169_1_2_pl_1",
+                  "https://d.flashscore.pl/x/feed/tr_3_200_IBmris38_169_2_2_pl_1",
+                  "https://d.flashscore.pl/x/feed/tr_3_200_IBmris38_169_3_2_pl_1",
+                  "https://d.flashscore.pl/x/feed/tr_3_200_IBmris38_169_4_2_pl_1",
+                  "https://d.flashscore.pl/x/feed/tr_3_200_IBmris38_169_5_2_pl_1",
+                  "https://d.flashscore.pl/x/feed/tr_3_200_IBmris38_169_6_2_pl_1",
+                  "https://d.flashscore.pl/x/feed/tr_3_200_IBmris38_169_7_2_pl_1",
+                  "https://d.flashscore.pl/x/feed/tr_3_200_IBmris38_169_8_2_pl_1",
+                  "https://d.flashscore.pl/x/feed/tr_3_200_IBmris38_169_9_2_pl_1",
+                  "https://d.flashscore.pl/x/feed/tr_3_200_IBmris38_169_10_2_pl_1",
+                  "https://d.flashscore.pl/x/feed/tr_3_200_IBmris38_169_11_2_pl_1",
+                  "https://d.flashscore.pl/x/feed/tr_3_200_IBmris38_169_12_2_pl_1"
+                  ]
+    name="ta2"
+    def start_requests(self):
+        for url in self.start_urls:
+            req = scrapy.Request(url,
+                                 method='GET',
+                                 body='{"filters": []}',
+                                 headers=x,
+                                 callback=self.parse)
+            yield req
+
+    def parse(self, response):
+        filename = "kody.txt"
+        with open(filename, 'a') as f:
+            for i in re.findall(r'÷[\w]{8}¬', response.text)[21::3]:
+                f.write(i[1:-1]+"\n")
+        yield {"AAAAAAAAAAA":re.findall(r'÷[\w]{8}¬',response.text)[21::3]}
+
