@@ -1,0 +1,43 @@
+import scrapy
+import json
+from scrapy.http.headers import Headers
+import csv
+
+RENDER_HTML_URL = "http://192.168.99.100:8050/render.html"
+
+class MySpider(scrapy.Spider):
+    kody=open("kody.txt", "r")
+    x = kody.read()
+    x = x.split("\n")
+    start_urls = ["https://www.flashscore.pl/mecz/{}/#zestawienie-kursow;kursy-1x2;1-polowa".format(i) for i in x[::-1]]
+    name="ta3"
+
+    def start_requests(self):
+        for url in self.start_urls:
+            body = json.dumps({"url": url, "wait": 2}, sort_keys=True)
+            headers = Headers({'Content-Type': 'application/json'})
+            yield scrapy.Request(RENDER_HTML_URL, self.parse, method="POST",
+                                 body=body, headers=headers)
+
+    def parse(self, response):
+        overodds=response.css("div#block-under-over-ft").css("table.odds.sortable").css("tbody").css("tr.odd").css("td.kx").css("span::text").getall()[::2]
+        underodds=response.css("div#block-under-over-ft").css("table.odds.sortable").css("tbody").css("tr.odd").css("td.kx").css("span::text").getall()[1::2]
+        diff=[float(i[0])-float(i[1]) for i in zip(overodds,underodds)]
+        absdiff=list(map(abs,diff))
+        ind=absdiff.index(min(map(abs,diff)))
+        row=[hash(response.css("div#utime::text").get()+
+               response.css("div.tname__text").css("a::text")[0].get()+
+               response.css("div.tname__text").css("a::text")[1].get()),
+             response.css("div.tname__text").css("a::text")[0].get(),
+             response.css("div.tname__text").css("a::text")[1].get(),
+             response.css("div#utime::text").get(),
+             response.css("div#block-under-over-ft").css("table.odds.sortable").css("tbody").css("tr.odd").css("td::text").getall()[ind]]
+        with open('ouborder.csv', 'a') as csvFile:
+            writer = csv.writer(csvFile)
+            writer.writerow(row)
+
+        csvFile.close()
+        yield {"AAAAA":response.css("div#block-under-over-ft").css("table.odds.sortable").css("tbody").css("tr.odd").css("td::text").getall()[ind],
+               "BBBBB":diff,
+               "CCCCC":ind,
+               "DDDDDD":response.css("div#block-under-over-ft").css("table.odds.sortable").css("tbody").css("tr.odd").css("td::text").getall()}
