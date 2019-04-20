@@ -1,0 +1,61 @@
+import scrapy
+import json
+from scrapy.http.headers import Headers
+import csv
+
+RENDER_HTML_URL = "http://192.168.99.100:8050/render.html"
+
+class MySpider(scrapy.Spider):
+    kody=open("kody.txt", "r")
+    x = kody.read()
+    x = x.split("\n")
+    start_urls = ["https://www.flashscore.pl/mecz/{}/#szczegoly-meczu".format(i) for i in x]
+    name="ta"
+
+    def start_requests(self):
+        for url in self.start_urls:
+            body = json.dumps({"url": url, "wait": 0.5}, sort_keys=True)
+            headers = Headers({'Content-Type': 'application/json'})
+            yield scrapy.Request(RENDER_HTML_URL, self.parse, method="POST",
+                                 body=body, headers=headers)
+
+    def parse(self, response):
+        row = [hash(response.css("div#utime::text").get()+
+               response.css("div.tname__text").css("a::text")[0].get()+
+               response.css("div.tname__text").css("a::text")[1].get()),
+                response.css("td.summary-horizontal").css("a::text")[0].get(),
+                response.css("td.summary-horizontal").css("a::text")[1].get(),
+                response.css("div#utime::text").get(),
+                response.css("span.p1_home::text").get(),
+                response.css("span.p1_away::text").get(),
+                response.css("span.p2_home::text").get(),
+                response.css("span.p2_away::text").get(),
+                response.css("span.p3_home::text").get(),
+                response.css("span.p3_away::text").get(),
+                response.css("span.p4_home::text").get(),
+                response.css("span.p4_away::text").get(),
+                response.css("span.odds-wrap::text")[0].get(),
+                response.css("span.odds-wrap::text")[1].get(),]
+        with open('mainstat.csv', 'a') as csvFile:
+            writer = csv.writer(csvFile)
+            writer.writerow(row)
+        csvFile.close()
+        yield {"home":response.css("td.summary-horizontal").css("a::text")[0].get(),
+                "away": response.css("td.summary-horizontal").css("a::text")[1].get(),
+               "AAAA":response.css("div.tname__text").css("a::text")[0].get(),
+               "BBBB": response.css("div.tname__text").css("a::text")[1].get(),
+                "p1_home":response.css("span.p1_home::text").get(),
+                "p1_away":response.css("span.p1_away::text").get(),
+                "p2_home":response.css("span.p2_home::text").get(),
+                "p2_away":response.css("span.p2_away::text").get(),
+                "p3_home": response.css("span.p3_home::text").get(),
+                "p3_away": response.css("span.p3_away::text").get(),
+                "p4_home": response.css("span.p4_home::text").get(),
+                "p4_away": response.css("span.p4_away::text").get(),
+                "odds_home":response.css("span.odds-wrap::text")[0].get(),
+                "odds_away": response.css("span.odds-wrap::text")[1].get(),
+               "czas":response.css("div#utime::text").get()
+
+               }
+
+
